@@ -1,2 +1,2 @@
-# coursera_practical_machine_learning_course_project
+# Coursera practical machine learning course project
 Coursera practical machine learning course project
