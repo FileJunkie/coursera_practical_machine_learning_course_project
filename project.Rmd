@@ -1,0 +1,58 @@
+---
+title: "Excercise Prediction"
+author: "Ilia Ershov"
+date: "June 20, 2016"
+output: html_document
+---
+
+```{r, echo = FALSE, cache = TRUE}
+# Getting the data file, if it's now downloaded yet
+if(!file.exists("pml-training.csv")){
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile="pml-training.csv")
+} else {
+  print("File pml-training.csv already exists, not refreshing it")
+}
+
+if(!file.exists("pml-testing.csv")){
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", destfile="pml-testing.csv")
+} else {
+  print("File pml-testing.csv already exists, not refreshing it")
+}
+
+training <- read.csv("pml-training.csv", na.strings = c("NA", "#DIV/0!"))
+testing <- read.csv("pml-testing.csv", na.strings = c("NA", "#DIV/0!"))
+
+```
+
+## Introduction
+
+## Fitting the model
+
+```{r, echo = TRUE}
+variablesCount <- dim(training)[2]
+
+nasPercentages <- sapply(1:variablesCount, function(x) {mean(is.na(training[,x]))})
+
+trainingFiltered <- training[,nasPercentages == 0]
+trainingFiltered <- trainingFiltered[,-(1:7)]
+
+library(caret)
+
+set.seed(31337)
+inTrain <- createDataPartition(y = trainingFiltered$classe, p = .8, list = FALSE)
+
+validation <- trainingFiltered[-inTrain,]
+trainingFiltered <- trainingFiltered[inTrain,]
+```
+
+```{r, echo = TRUE, cache = TRUE}
+fit <- train(classe ~ ., data = trainingFiltered, method = "gbm")
+validation$predicted <- predict(fit, validation)
+mean(validation$predicted != validation$classe)
+```
+
+## Results
+
+```{r, echo = TRUE}
+testing$predicted <- predict(fit, testing)
+```
