@@ -5,8 +5,15 @@ date: "June 20, 2016"
 output: html_document
 ---
 
-```{r, echo = FALSE}
-# Getting the data file, if it's now downloaded yet
+## Introduction
+
+This work investigates the way to predict the manner in which people perform the excercises using the data collected by the personal measurement devices.
+
+## Reading and preparing the data
+
+First, let us download and read the data. Some of the fields have `#DIV/0!` instead of real values, and in this work this errors will be interpreted as NA.
+
+```{r, echo = TRUE}
 if(!file.exists("pml-training.csv")){
   download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile="pml-training.csv")
 }
@@ -20,18 +27,33 @@ testing <- read.csv("pml-testing.csv", na.strings = c("NA", "#DIV/0!"))
 
 ```
 
-## Introduction
-
-## Fitting the model
+This data set lots of variables that could be predictors and one outcome variable for the training data - `classe`. Not all of the variables can or should be used for the prediction - some of it is the number of the current measurements, timestamps, usernames or measurement window numbers, which should not be used for prediction:
 
 ```{r, echo = TRUE}
-variablesCount <- dim(training)[2]
+head(names(training), 7)
+```
 
+Lots of variables have always or almost always empty values, and can't be used at all:
+
+```{r, echo =  TRUE}
+variablesCount <- dim(training)[2]
 nasPercentages <- sapply(1:variablesCount, function(x) {mean(is.na(training[,x]))})
 
+plot(nasPercentages)
+```
+
+Let's filter out variables then and only use variables that always have values and are not user name/measurement number/etc.
+
+```{r, echo = TRUE}
 trainingFiltered <- training[,nasPercentages == 0]
 trainingFiltered <- trainingFiltered[,-(1:7)]
+```
 
+We need to split the data to the training and the validation set to implement the cross-validation. Let's use 80% of the rows as a training set.
+
+```{r, echo = TRUE}
+library(ggplot2)
+library(lattice)
 library(caret)
 
 set.seed(31337)
@@ -41,16 +63,26 @@ validation <- trainingFiltered[-inTrain,]
 trainingFiltered <- trainingFiltered[inTrain,]
 ```
 
+## Fitting the model
+
+There are lots of the available models to available for predicting the outcome of a factor variable, and it turns out the random forests model provides pretty good results with the error rate is lower than 1%.
+
 ```{r, echo = TRUE, cache = TRUE}
-fit <- train(classe ~ ., data = trainingFiltered, method = "gbm", verbose = FALSE)
-```
-```{r, echo = TRUE}
-validation$predicted <- predict(fit, validation)
-mean(validation$predicted != validation$classe)
+fit <- train(classe ~ ., data = trainingFiltered, method = "rf", verbose = FALSE)
+validation$predictedRF <- predict(fit, validation)
+mean(validation$predictedRF != validation$classe)
 ```
 
 ## Results
 
+Now, since we are having a build model based on the boosting algorithm, let us predict the values for the provided testing data set.
+
 ```{r, echo = TRUE}
 testing$predicted <- predict(fit, testing)
+```
+
+The values for these 20 items are:
+
+```{r, echo = TRUE}
+testing$predicted
 ```
